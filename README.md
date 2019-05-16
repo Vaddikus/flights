@@ -29,7 +29,6 @@ _Your variant of output isn't correct. It looks as if you calculate that January
    KBP 1
    JFK 0
    ```
-_But it is not correct.
-Because we see in this file (of course it is just an example) that January, 1st is a 3 day of week (Wednesday)
+_But it is not correct. Because we see in this file (of course it is just an example) that January, 1st is a 3 day of week (Wednesday)
 So, e.g. January, 6 - is Week 2 (because it is Monday) So January 13 is a Week 3.
 That's why I decided to write code depending on number of day of week (not as in your example above)_
