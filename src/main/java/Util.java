@@ -1,40 +1,45 @@
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.text.ParseException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.io.FileReader;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class Util {
 
-    public static Map<String, Integer> totalArivedPlans(String file) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(file));
-        Map<String, Integer> airports = new HashMap<String, Integer>();
-        String line = "";
-        while ((line = reader.readLine()) != null) {
-            if (line.startsWith("\"YEAR")) continue;
+    public static Map<String, Integer> totalArivedPlans(String file) throws IOException, CorruptedException {
 
-            String[] lines = line.split(",");
-            if (!airports.containsKey(lines[6])) {
-                airports.put(lines[6], 0);
+        Map<String, Integer> airports = new HashMap<>();
+        String line = "";
+        try(BufferedReader reader = new BufferedReader(new FileReader(file));) {
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("\"YEAR")) continue;
+
+                String[] lines = line.split(",");
+                if (!airports.containsKey(lines[6])) {
+                    airports.put(lines[6], 0);
+                }
+                if (!airports.containsKey(lines[7])) {
+                    airports.put(lines[7], 1);
+                } else {
+                    airports.put(lines[7], airports.get(lines[7]) + 1);
+                }
+
             }
-            if (!airports.containsKey(lines[7])) {
-                airports.put(lines[7], 1);
-            } else {
-                airports.put(lines[7], airports.get(lines[7]) + 1);
-            }
+        }
+        catch (ArrayIndexOutOfBoundsException e) {
+            System.out.println("ArrayIndexOutOfBoundsException is handled");
+            throw new CorruptedException("Input csv file has incorrect format");
 
         }
-        reader.close();
+
         return airports;
     }
 
-    public static Map<String, Integer> differenceOfArriveAndLeft(String file) throws IOException {
+    public static Map<String, Integer> differenceOfArrivedAndLeft(String file) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(file));
         final Map<String, List<Integer>> airports = new HashMap<String, List<Integer>>();
 
@@ -78,74 +83,60 @@ public class Util {
         return difference;
     }
 
-       /*      2014,1, 1,1,3, 2014-01-01,"JFK","LAX",
-                2014,1, 1,5,7, 2014-01-05,"JFK","KBP",
-                2014,1, 1,6,1, 2014-01-06,"KBP","LAX",
-
-                2014,1, 1,8,3, 2014-01-08,"JFK","LAX",
-                2014,1, 1,12,7, 2014-01-12,"JFK","KBP",
-                2014,1, 1,13,1, 2014-01-13,"KBP","LAX",
-                2014,1, 3,13,1, 2014-01-13,"KBP","LAX",
-       */
-
-    public static List<Map<String, Integer>> arivedPlansPerWeek(String file){
+    public static List<Map<String, Integer>> arrivedPlansPerWeek(String file) {
 
         List<Map<String, Integer>> airports = new ArrayList<>();
         String line = "";
         int dayOfWeekBefore = 0;
         int weekIndex = 0;
-        LocalDate dayBefore = LocalDate.of(1990,1,1);
+        LocalDate dayBefore = LocalDate.of(2000, 1, 1);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        try( BufferedReader reader = new BufferedReader(new FileReader(file))) {
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             while ((line = reader.readLine()) != null) {
                 if (line.startsWith("\"YEAR")) continue;
+
                 String[] parts = line.split(",");
                 int dayOfWeek = Integer.parseInt(parts[4]);
                 LocalDate day = LocalDate.parse(parts[5], formatter);
-                if (day.getYear() - dayBefore.getYear() > 20) {
+
+                if (day.getYear() - dayBefore.getYear() > 1) {
                     airports.add(new HashMap<>());
+                    dayBefore = day;
                 }
                 if (dayOfWeek > dayOfWeekBefore && day.minusDays(7).isBefore(dayBefore)) {
-                    if (airports.get(weekIndex).containsKey(parts[6])) {
-
-                        airports.get(weekIndex).put(parts[6], 0);
-                    }
-                    if (!airports.get(weekIndex).containsKey(parts[7])) {
-                        airports.add(new HashMap<>());
-                        airports.get(weekIndex).put(parts[7], 1);
-                    } else {
-                        airports.get(weekIndex).put(parts[7], airports.get(weekIndex).get(parts[7]) + 1);
-                    }
+                    addFlight(airports, weekIndex, parts);
                 } else {
                     weekIndex++;
                     airports.add(new HashMap<>());
-                    if (airports.get(weekIndex).containsKey(parts[6])) {
-
-                        airports.get(weekIndex).put(parts[6], 0);
-                    }
-                    if (!airports.get(weekIndex).containsKey(parts[7])) {
-                        airports.get(weekIndex).put(parts[7], 1);
-                    } else {
-                        airports.get(weekIndex).put(parts[7], airports.get(weekIndex).get(parts[7]) + 1);
-                    }
+                    addFlight(airports, weekIndex, parts);
                 }
+
                 dayBefore = day;
                 dayOfWeekBefore = dayOfWeek;
             }
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             System.out.println("Input file couldn't be read!" + e.getMessage());
             e.printStackTrace();
-        }
-        catch (StringIndexOutOfBoundsException e) {
+        } catch (StringIndexOutOfBoundsException e) {
             System.out.println("I\"Data in file has incorrect format" + e.getMessage());
             e.printStackTrace();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             System.out.println("Something went wrong!");
             e.printStackTrace();
         }
         return airports;
+    }
+
+    private static void addFlight(List<Map<String, Integer>> airports, int weekIndex, String[] parts) {
+        if (!airports.get(weekIndex).containsKey(parts[6])) {
+            airports.get(weekIndex).put(parts[6], 0);
+        }
+        if (!airports.get(weekIndex).containsKey(parts[7])) {
+            airports.get(weekIndex).put(parts[7], 1);
+        } else {
+            airports.get(weekIndex).put(parts[7], airports.get(weekIndex).get(parts[7]) + 1);
+        }
     }
 
 }

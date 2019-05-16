@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.util.zip.GZIPInputStream;
 
 public class Unzip {
+
     private static final String INPUT_GZIP_FILE = "./src/main/resources/planes_log.csv.gz";
     private static final String OUTPUT_FILE = "./src/main/resources/planes_log.csv";
-
 
     public void unzip() {
         byte[] buffer = new byte[1024];
@@ -23,5 +23,9 @@ public class Unzip {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    public static String getInputGzipFile() {
+        return INPUT_GZIP_FILE;
     }
 }
